@@ -4,14 +4,22 @@ use bot::{
     Data,
 };
 use poise::{Framework, FrameworkOptions, PrefixFrameworkOptions};
+use reqwest::Client as HttpClient;
 use serenity::async_trait;
 use serenity::model::channel::Message;
 use serenity::model::gateway::Ready;
 use serenity::prelude::*;
 use shuttle_runtime::SecretStore;
-use tracing::{error, info};
+use songbird::SerenityInit;
+use tracing::info;
 
 mod bot;
+
+struct HttpKey;
+
+impl TypeMapKey for HttpKey {
+    type Value = HttpClient;
+}
 
 struct Bot;
 
@@ -67,6 +75,8 @@ async fn serenity(
     let client = Client::builder(&token, intents)
         .event_handler(Bot)
         .framework(framework)
+        .register_songbird()
+        .type_map_insert::<HttpKey>(HttpClient::new())
         .await
         .expect("Err creating client");
 
