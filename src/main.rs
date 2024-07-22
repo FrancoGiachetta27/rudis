@@ -14,6 +14,7 @@ use songbird::SerenityInit;
 use tracing::info;
 
 mod bot;
+mod sources;
 
 struct HttpKey;
 
@@ -25,7 +26,7 @@ struct Bot;
 
 #[async_trait]
 impl EventHandler for Bot {
-    async fn message(&self, ctx: Context, msg: Message) {}
+    async fn message(&self, _ctx: Context, _msg: Message) {}
 
     async fn ready(&self, _: Context, ready: Ready) {
         info!("{} is connected!", ready.user.name);
@@ -36,6 +37,10 @@ impl EventHandler for Bot {
 async fn serenity(
     #[shuttle_runtime::Secrets] secrets: SecretStore,
 ) -> shuttle_serenity::ShuttleSerenity {
+    // rustls::crypto::ring::default_provider()
+    //     .install_default()
+    //     .expect("Failed to install rustls crypto provider"); 
+    
     // Get the discord token set in `Secrets.toml`
     let token = secrets
         .get("DISCORD_TOKEN")
