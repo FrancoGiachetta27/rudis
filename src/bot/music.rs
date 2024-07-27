@@ -1,8 +1,7 @@
 use super::{get_voice_manage_info, Context, Error};
+use crate::sources;
 use poise::command;
 use tracing::info;
-use crate::sources;
-
 
 /// play: finds a song on youtube and plays it (receives the song's name or a youtube's link)
 #[command(prefix_command, aliases("p"), slash_command, guild_only)]
@@ -13,25 +12,38 @@ pub async fn play(
     if let Some((manager, guild_id, channel_id)) = get_voice_manage_info(&ctx).await {
         let song = args.join(" ");
 
-        let handler = manager.join(guild_id, channel_id).await?;
+        let handler_lock = manager.join(guild_id, channel_id).await?;
 
         if let Some(source) = sources::get_from_yt(&ctx, song).await {
             info!("Source: {:?}", source);
-            let mut handler_lock = handler.lock().await;
-            let _ = handler_lock.play_input(source.clone().into());
+            let mut handler = handler_lock.lock().await;
+            let _ = handler.play_input(source.clone().into());
         } else {
             ctx.reply("Could not get that song from youtube, check if it exist or is available")
                 .await?;
         }
-    } 
+    }
 
     Ok(())
 }
 
 /// puase: pauses the current playing track
-#[command(prefix_command, slash_command)]
+#[command(prefix_command, guild_only, slash_command)]
 pub async fn pause(ctx: Context<'_>) -> Result<(), Error> {
-    ctx.reply("pause!").await?;
+    if let Some((manager, guild_id, _)) = get_voice_manage_info(&ctx).await {
+        let handler_lock = manager.get(guild_id).unwrap();
+        let handler = handler_lock.lock().await;
+
+        let queue = handler.queue();
+
+        match queue.current() {
+            Some(c) => c.pause()?,
+            None => {
+                ctx.reply("There's no song being played right now").await?;
+            }
+        };
+    }
+
     Ok(())
 }
 
