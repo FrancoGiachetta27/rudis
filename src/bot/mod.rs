@@ -1,13 +1,19 @@
 use anyhow::Context as AnyContext;
+use reqwest::Client as HttpClient;
 use serenity::all::{ChannelId, GuildId};
-use songbird::Songbird;
+use songbird::{typemap::TypeMapKey, Songbird};
 use std::sync::Arc;
-use tracing::error;
 
 pub mod general;
 pub mod music;
 
+pub struct Bot;
 pub struct Data {}
+pub struct HttpKey;
+
+impl TypeMapKey for HttpKey {
+    type Value = HttpClient;
+}
 
 pub type Error = Box<dyn std::error::Error + Send + Sync>;
 pub type Context<'a> = poise::Context<'a, Data, Error>;

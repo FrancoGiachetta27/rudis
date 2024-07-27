@@ -9,7 +9,7 @@ poise = "0.6.1"
 serenity = { version = "0.12.2", default-features = false, features = [
     "client",
     "gateway",
-    "rustls_backend",
+    "native_tls_backend",
     "model",
     "voice",
     "utils",
@@ -17,10 +17,10 @@ serenity = { version = "0.12.2", default-features = false, features = [
     "http",
     "cache",
 ] }
-shuttle-runtime = "0.46.0"
-shuttle-serenity = "0.46.0"
 songbird = { version = "0.4.3", features = ["builtin-queue", "driver"] }
+symphonia = { version = "0.5.2", features = ["aac", "mp3", "isomp4", "alac"] }
+shuttle-runtime = "0.47.0"
+shuttle-serenity = "0.47.0"
 reqwest = { default-features = false, features = ["stream"], version = "0.11" }
 tokio = { version = "1.26.0", features = ["macros", "rt-multi-thread", "signal", "sync"] }
 tracing = "0.1.37"
-rustls = { version = "0.23.4", default-features = false, features = ["std", "tls12", "ring"] }
