@@ -1,7 +1,6 @@
-use super::{get_voice_manage_info, Context, Error};
-use crate::sources;
+use crate::bot::{get_voice_manage_info, queue, Context, Error};
 use poise::command;
-use tracing::info;
+use tracing::{error, info};
 
 /// play: finds a song on youtube and plays it (receives the song's name or a youtube's link)
 #[command(prefix_command, aliases("p"), slash_command, guild_only)]
@@ -10,18 +9,15 @@ pub async fn play(
     #[description = "Song to play"] args: Vec<String>,
 ) -> Result<(), Error> {
     if let Some((manager, guild_id, channel_id)) = get_voice_manage_info(&ctx).await {
-        let song = args.join(" ");
-
+        let track = args.join(" ");
         let handler_lock = manager.join(guild_id, channel_id).await?;
 
-        if let Some(source) = sources::get_from_yt(&ctx, song).await {
-            info!("Source: {:?}", source);
-            let mut handler = handler_lock.lock().await;
-            let _ = handler.play_input(source.clone().into());
-        } else {
-            ctx.reply("Could not get that song from youtube, check if it exist or is available")
-                .await?;
-        }
+        queue::enqueue_track(&ctx, &handler_lock, track).await?;
+
+        let handler = handler_lock.lock().await;
+        let queue = handler.queue();
+
+        queue.current().unwrap().play()?;
     }
 
     Ok(())
@@ -33,15 +29,13 @@ pub async fn pause(ctx: Context<'_>) -> Result<(), Error> {
     if let Some((manager, guild_id, _)) = get_voice_manage_info(&ctx).await {
         let handler_lock = manager.get(guild_id).unwrap();
         let handler = handler_lock.lock().await;
-
         let queue = handler.queue();
 
-        match queue.current() {
-            Some(c) => c.pause()?,
-            None => {
-                ctx.reply("There's no song being played right now").await?;
-            }
+        if let Err(_) = queue.pause() {
+            ctx.reply("There's no song being played right now").await?;
         };
+    } else {
+        ctx.reply("There's no song being played right now").await?;
     }
 
     Ok(())
@@ -50,14 +44,31 @@ pub async fn pause(ctx: Context<'_>) -> Result<(), Error> {
 /// resume: resumes the puased track, does nothing if there is noone
 #[command(prefix_command, slash_command)]
 pub async fn resume(ctx: Context<'_>) -> Result<(), Error> {
-    ctx.reply("resume!").await?;
+    if let Some((manager, guild_id, _)) = get_voice_manage_info(&ctx).await {
+        let handler_lock = manager.get(guild_id).unwrap();
+        let handler = handler_lock.lock().await;
+        let queue = handler.queue();
+
+        if queue.resume().is_err() {
+            ctx.reply("There's no song in the queue right now or it is already being played")
+                .await?;
+        };
+    }
+
     Ok(())
 }
 
 /// stop: stop the bot and cleans the queue
 #[command(prefix_command, slash_command)]
 pub async fn stop(ctx: Context<'_>) -> Result<(), Error> {
-    ctx.reply("stop!").await?;
+    if let Some((manager, guild_id, _)) = get_voice_manage_info(&ctx).await {
+        let handler_lock = manager.get(guild_id).unwrap();
+        let handler = handler_lock.lock().await;
+        let queue = handler.queue();
+
+        queue.stop();
+    }
+
     Ok(())
 }
 

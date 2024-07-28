@@ -11,7 +11,7 @@ pub async fn get_from_yt(ctx: &Context<'_>, song: String) -> Option<YoutubeDl> {
             Some(c) => c,
             None => {
                 error!("Guaranteed to exist in the typemap.");
-                return None
+                return None;
             }
         }
     };

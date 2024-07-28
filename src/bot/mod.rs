@@ -4,10 +4,10 @@ use serenity::all::{ChannelId, GuildId};
 use songbird::{typemap::TypeMapKey, Songbird};
 use std::sync::Arc;
 
-pub mod general;
-pub mod music;
+pub mod commands;
+pub mod queue;
+pub mod sources;
 
-pub struct Bot;
 pub struct Data {}
 pub struct HttpKey;
 
@@ -17,6 +17,7 @@ impl TypeMapKey for HttpKey {
 
 pub type Error = Box<dyn std::error::Error + Send + Sync>;
 pub type Context<'a> = poise::Context<'a, Data, Error>;
+pub type Command = poise::Command<Data, Error>;
 
 /// returns the necessary info to manage bot's voice state
 /// if the channel id cannot be obtained, then it returns nothing

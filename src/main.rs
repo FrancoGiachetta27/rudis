@@ -2,13 +2,15 @@ use anyhow::Context as AnyContext;
 use poise::{Framework, FrameworkOptions, PrefixFrameworkOptions};
 use reqwest::Client as HttpClient;
 use rudis::bot::{
-    music::{beginloop, endloop, pause, play, queue, resume, skip, stop},
+    commands::music_commands,
     Data, HttpKey,
 };
 use serenity::all::GatewayIntents;
 use serenity::prelude::*;
 use shuttle_runtime::SecretStore;
 use songbird::SerenityInit;
+
+mod bot;
 
 #[shuttle_runtime::main]
 async fn serenity(
@@ -24,16 +26,7 @@ async fn serenity(
 
     let framework = Framework::builder()
         .options(FrameworkOptions {
-            commands: vec![
-                play(),
-                pause(),
-                resume(),
-                stop(),
-                skip(),
-                queue(),
-                beginloop(),
-                endloop(),
-            ],
+            commands: music_commands(), 
             prefix_options: PrefixFrameworkOptions {
                 prefix: Some(secrets.get("PREFIX").context("'PREFIX', was not found")?),
                 case_insensitive_commands: true,
