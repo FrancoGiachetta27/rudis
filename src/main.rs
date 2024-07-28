@@ -1,36 +1,16 @@
 use anyhow::Context as AnyContext;
-use bot::{
-    music::{beginloop, endloop, pause, play, queue, resume, skip, stop},
-    Data,
-};
 use poise::{Framework, FrameworkOptions, PrefixFrameworkOptions};
 use reqwest::Client as HttpClient;
-use serenity::async_trait;
-use serenity::model::channel::Message;
-use serenity::model::gateway::Ready;
+use rudis::bot::{
+    commands::music_commands,
+    Data, HttpKey,
+};
+use serenity::all::GatewayIntents;
 use serenity::prelude::*;
 use shuttle_runtime::SecretStore;
 use songbird::SerenityInit;
-use tracing::info;
 
 mod bot;
-
-struct HttpKey;
-
-impl TypeMapKey for HttpKey {
-    type Value = HttpClient;
-}
-
-struct Bot;
-
-#[async_trait]
-impl EventHandler for Bot {
-    async fn message(&self, ctx: Context, msg: Message) {}
-
-    async fn ready(&self, _: Context, ready: Ready) {
-        info!("{} is connected!", ready.user.name);
-    }
-}
 
 #[shuttle_runtime::main]
 async fn serenity(
@@ -46,16 +26,7 @@ async fn serenity(
 
     let framework = Framework::builder()
         .options(FrameworkOptions {
-            commands: vec![
-                play(),
-                pause(),
-                resume(),
-                stop(),
-                skip(),
-                queue(),
-                beginloop(),
-                endloop(),
-            ],
+            commands: music_commands(), 
             prefix_options: PrefixFrameworkOptions {
                 prefix: Some(secrets.get("PREFIX").context("'PREFIX', was not found")?),
                 case_insensitive_commands: true,
@@ -73,7 +44,6 @@ async fn serenity(
         .build();
 
     let client = Client::builder(&token, intents)
-        .event_handler(Bot)
         .framework(framework)
         .register_songbird()
         .type_map_insert::<HttpKey>(HttpClient::new())
