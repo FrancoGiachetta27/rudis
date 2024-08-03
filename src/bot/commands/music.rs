@@ -1,6 +1,10 @@
-use crate::bot::{get_voice_manage_info, queue, Context, Error};
+use crate::bot::{
+    get_voice_manage_info,
+    queue::{self, SkipQuery},
+    Context, Error,
+};
 use poise::command;
-use tracing::{error, info};
+use tracing::error;
 
 /// play: finds a song on youtube and plays it (receives the song's name or a youtube's link)
 #[command(prefix_command, aliases("p"), slash_command, guild_only)]
@@ -12,12 +16,25 @@ pub async fn play(
         let track = args.join(" ");
         let handler_lock = manager.join(guild_id, channel_id).await?;
 
-        queue::enqueue_track(&ctx, &handler_lock, track).await?;
+        if let Err(err) = queue::enqueue_track(&ctx, &handler_lock, track.clone()).await {
+            error!("An error ocurred while enqueueing the track: {}", err);
+
+            ctx.reply("An error ocurred while adding the track to the queue")
+                .await?;
+        };
 
         let handler = handler_lock.lock().await;
         let queue = handler.queue();
 
-        queue.current().unwrap().play()?;
+        if let Err(e) = queue.current().unwrap().play() {
+            error!("An error ocurred while playing the track {}", e);
+
+            ctx.reply(format!(
+                "There was an err while trying to play the track {}",
+                track.clone()
+            ))
+            .await?;
+        };
     }
 
     Ok(())
@@ -31,9 +48,11 @@ pub async fn pause(ctx: Context<'_>) -> Result<(), Error> {
         let handler = handler_lock.lock().await;
         let queue = handler.queue();
 
-        if let Err(_) = queue.pause() {
+        if let Err(e) = queue.pause() {
+            error!("An error ocurred while pausing the track {}", e);
+
             ctx.reply("There's no song being played right now").await?;
-        };
+        }
     } else {
         ctx.reply("There's no song being played right now").await?;
     }
@@ -49,10 +68,12 @@ pub async fn resume(ctx: Context<'_>) -> Result<(), Error> {
         let handler = handler_lock.lock().await;
         let queue = handler.queue();
 
-        if queue.resume().is_err() {
+        if let Err(e) = queue.resume() {
+            error!("An error ocurred while resuming the track {}", e);
+
             ctx.reply("There's no song in the queue right now or it is already being played")
                 .await?;
-        };
+        }
     }
 
     Ok(())
@@ -63,10 +84,11 @@ pub async fn resume(ctx: Context<'_>) -> Result<(), Error> {
 pub async fn stop(ctx: Context<'_>) -> Result<(), Error> {
     if let Some((manager, guild_id, _)) = get_voice_manage_info(&ctx).await {
         let handler_lock = manager.get(guild_id).unwrap();
-        let handler = handler_lock.lock().await;
-        let queue = handler.queue();
+        let mut handler = handler_lock.lock().await;
 
-        queue.stop();
+        handler.stop();
+
+        ctx.data().clean();
     }
 
     Ok(())
@@ -75,24 +97,68 @@ pub async fn stop(ctx: Context<'_>) -> Result<(), Error> {
 /// skip: drops the current playing track and plays the next one
 #[command(prefix_command, slash_command)]
 pub async fn skip(ctx: Context<'_>) -> Result<(), Error> {
-    ctx.reply("skip!").await?;
+    if let Some((manager, guild_id, _)) = get_voice_manage_info(&ctx).await {
+        let handler_lock = manager.get(guild_id).unwrap();
+
+        if let Err(err) = queue::skip_song(&ctx, &handler_lock, SkipQuery::Front).await {
+            error!("An error ocurred while skiping front: {}", err);
+
+            ctx.reply("An error ocurred while skiping").await?;
+        };
+    }
+
     Ok(())
 }
 
 /// skipto: skips to the given queue position and plays the asociated track, dropping the others
 #[command(prefix_command, slash_command)]
-pub async fn skipto(ctx: Context<'_>, args: String) -> Result<(), Error> {
-    ctx.reply("skipto!").await?;
+pub async fn skipto(ctx: Context<'_>, args: u32) -> Result<(), Error> {
+    if let Some((manager, guild_id, _)) = get_voice_manage_info(&ctx).await {
+        let handler_lock = manager.get(guild_id).unwrap();
+
+        {
+            let handler = handler_lock.lock().await;
+
+            handler.queue().pause()?;
+        }
+
+        if let Err(err) = queue::skip_song(&ctx, &handler_lock, SkipQuery::Index(args)).await {
+            error!("An error ocurred while skiping to index {}: {}", args, err);
+
+            ctx.reply("An error ocurred while skiping").await?;
+        }
+
+        let handler = handler_lock.lock().await;
+        let queue = handler.queue();
+
+        if let Err(e) = queue.current().unwrap().play() {
+            let current_track = ctx.data().get_track(0).unwrap();
+
+            error!("An error ocurred while playing the track {}", e);
+
+            ctx.reply(format!(
+                "There was an err while trying to play the track {}",
+                current_track.title.unwrap()
+            ))
+            .await?;
+        };
+
+        ctx.data().pop_range(args);
+    }
+
     Ok(())
 }
 
-/// queue: enqueues the given song
+/// queue: shows the current track queue
 #[command(prefix_command, slash_command)]
-pub async fn queue(
-    ctx: Context<'_>,
-    #[description = "Song to enqueue"] args: String,
-) -> Result<(), Error> {
-    ctx.reply("queue!").await?;
+pub async fn queue(ctx: Context<'_>) -> Result<(), Error> {
+    if let Err(err) = queue::show_queue(&ctx).await {
+        error!("An error ocurred while showing the queue: {}", err);
+
+        ctx.reply("An error ocurred while trying to show the queue")
+            .await?;
+    }
+
     Ok(())
 }
 
