@@ -5,10 +5,12 @@ use songbird::{typemap::TypeMapKey, Songbird};
 use std::sync::Arc;
 
 pub mod commands;
+pub mod data;
 pub mod queue;
 pub mod sources;
 
-pub struct Data {}
+use data::Data;
+
 pub struct HttpKey;
 
 impl TypeMapKey for HttpKey {

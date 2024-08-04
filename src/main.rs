@@ -1,10 +1,7 @@
 use anyhow::Context as AnyContext;
 use poise::{Framework, FrameworkOptions, PrefixFrameworkOptions};
 use reqwest::Client as HttpClient;
-use rudis::bot::{
-    commands::music_commands,
-    Data, HttpKey,
-};
+use rudis::bot::{commands::music_commands, data::Data, HttpKey};
 use serenity::all::GatewayIntents;
 use serenity::prelude::*;
 use shuttle_runtime::SecretStore;
@@ -26,7 +23,7 @@ async fn serenity(
 
     let framework = Framework::builder()
         .options(FrameworkOptions {
-            commands: music_commands(), 
+            commands: music_commands(),
             prefix_options: PrefixFrameworkOptions {
                 prefix: Some(secrets.get("PREFIX").context("'PREFIX', was not found")?),
                 case_insensitive_commands: true,
@@ -38,7 +35,7 @@ async fn serenity(
             Box::pin(async move {
                 poise::builtins::register_globally(ctx, &framework.options().commands).await?;
 
-                Ok(Data {})
+                Ok(Data::default())
             })
         })
         .build();
