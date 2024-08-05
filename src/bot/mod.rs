@@ -11,6 +11,8 @@ pub mod sources;
 
 use data::Data;
 
+use crate::utils::{create_embed_error, send_embed_message};
+
 pub struct HttpKey;
 
 impl TypeMapKey for HttpKey {
@@ -39,7 +41,8 @@ pub async fn get_voice_manage_info(
     let connect_to = match channel_id {
         Some(c) => c,
         None => {
-            ctx.reply("You should be in a channel!").await.unwrap();
+            let embed = create_embed_error("You should be in a channel");
+            send_embed_message(&ctx, embed).await.unwrap();
 
             return None;
         }

@@ -8,6 +8,7 @@ use shuttle_runtime::SecretStore;
 use songbird::SerenityInit;
 
 mod bot;
+mod utils;
 
 #[shuttle_runtime::main]
 async fn serenity(

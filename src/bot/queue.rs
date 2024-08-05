@@ -1,10 +1,13 @@
-use serenity::futures::SinkExt;
 use serenity::prelude::Mutex;
 use songbird::input::Input;
-use songbird::typemap::DebuggableStorage;
 use songbird::Call;
 use std::sync::Arc;
 use tracing::{debug, info};
+
+use crate::utils::{
+    create_embed_error, create_multi_embed, create_simple_embed, create_track_embed,
+    send_embed_message,
+};
 
 use super::sources;
 
@@ -26,14 +29,27 @@ pub async fn enqueue_track(
         let mut input: Input = source.into();
         let metadata = input.aux_metadata().await?;
 
-        info!("Added a new track to the queue: {:#?}", metadata);
+        ctx.data().enqueue_track(metadata.clone());
 
-        ctx.data().enqueue_track(metadata);
+        let title = metadata.title.unwrap();
+        let description = "```css\n🎙️  New track added\n```";
+        let author = ctx.author().name.clone();
+        let artist = metadata.artist.unwrap();
+        let thumbnail = metadata.thumbnail.unwrap();
+        let url = metadata.source_url.clone().unwrap().clone();
+        let duration = metadata.duration.unwrap();
+
+        let embed =
+            create_track_embed(title, description, author, artist, url, thumbnail, duration);
+
+        send_embed_message(&ctx, embed).await?;
 
         handler.enqueue_input(input).await;
     } else {
-        ctx.reply("Could not get that song from youtube, check if it exist or is available")
-            .await?;
+        let embed = create_embed_error(
+            "Could not get that song from youtube, check if it exist or is available",
+        );
+        send_embed_message(&ctx, embed).await?;
     }
 
     Ok(())
@@ -57,8 +73,10 @@ pub async fn skip_song(
             }
             SkipQuery::Index(index) => {
                 if (queue.len() as u32) < index {
-                    ctx.reply("The queue is currently shorter than the index provided".to_string())
-                        .await?;
+                    let embed = create_embed_error(
+                        "The queue is currently shorter than the index provided",
+                    );
+                    send_embed_message(&ctx, embed).await?;
                 } else {
                     queue.modify_queue(|q| {
                         for _ in 0..index {
@@ -69,7 +87,8 @@ pub async fn skip_song(
             }
         }
     } else {
-        ctx.reply("The track queue is currently empty").await?;
+        let embed = create_embed_error("The track queue is currently empty");
+        send_embed_message(&ctx, embed).await?;
     }
 
     Ok(())
@@ -79,16 +98,21 @@ pub async fn show_queue(ctx: &Context<'_>) -> Result<(), Error> {
     let queue = ctx.data().get_queue();
 
     if queue.is_empty() {
-        ctx.reply("The queue is empty!").await?;
+        let embed = create_embed_error("The queue is empty");
+        send_embed_message(&ctx, embed).await?;
 
-        return Ok(())
+        return Ok(());
     }
-    
-    for t in queue.iter() {
-        let track = t.title.as_ref().unwrap();
 
-        info!("TRACK {}", track);
-    }
+    let fields = queue
+        .iter()
+        .enumerate()
+        .map(|(i, track)| (i.to_string(), track.title.clone().unwrap(), true))
+        .collect::<Vec<(String, String, bool)>>();
+
+    let embed = create_multi_embed(fields);
+
+    send_embed_message(&ctx, embed).await?;
 
     Ok(())
 }

@@ -19,14 +19,6 @@ impl Data {
         self.queue_metadata.write().unwrap().push_front(meta);
     }
 
-    pub fn get_track(&self, index: u32) -> Option<AuxMetadata> {
-        self.queue_metadata
-            .read()
-            .unwrap()
-            .get(index as usize)
-            .cloned()
-    }
-
     pub fn pop_track(&self) {
         self.queue_metadata.write().unwrap().pop_back().unwrap();
     }
