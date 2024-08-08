@@ -11,7 +11,7 @@ pub mod sources;
 
 use data::Data;
 
-use crate::utils::{create_embed_error, send_embed_message};
+use crate::utils::embed::{create_embed_error, send_embed_message};
 
 pub struct HttpKey;
 

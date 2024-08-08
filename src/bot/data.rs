@@ -15,6 +15,14 @@ impl Data {
         self.queue_metadata.read().unwrap().clone()
     }
 
+    pub fn get_track(&self, index: u32) -> Option<AuxMetadata> {
+        self.queue_metadata
+            .read()
+            .unwrap()
+            .get(index as usize)
+            .cloned()
+    }
+
     pub fn enqueue_track(&self, meta: AuxMetadata) {
         self.queue_metadata.write().unwrap().push_front(meta);
     }

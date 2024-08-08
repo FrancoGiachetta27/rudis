@@ -4,7 +4,7 @@ use crate::{
         queue::{self, SkipQuery},
         Context, Error,
     },
-    utils::{create_embed_error, send_embed_message},
+    utils::embed::{create_embed_error, send_embed_message},
 };
 use poise::command;
 use tracing::error;

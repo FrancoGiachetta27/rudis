@@ -4,7 +4,7 @@ use songbird::Call;
 use std::sync::Arc;
 use tracing::{debug, info};
 
-use crate::utils::{
+use crate::utils::embed::{
     create_embed_error, create_multi_embed, create_simple_embed, create_track_embed,
     send_embed_message,
 };
@@ -107,7 +107,7 @@ pub async fn show_queue(ctx: &Context<'_>) -> Result<(), Error> {
     let fields = queue
         .iter()
         .enumerate()
-        .map(|(i, track)| (i.to_string(), track.title.clone().unwrap(), true))
+        .map(|(i, track)| (format!("{}.", i.to_string()),format!("```css\n🎙️  {} \n```", track.title.clone().unwrap()), false))
         .collect::<Vec<(String, String, bool)>>();
 
     let embed = create_multi_embed(fields);
