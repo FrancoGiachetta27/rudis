@@ -171,8 +171,22 @@ pub async fn queue(ctx: Context<'_>) -> Result<(), Error> {
 /// beginloop: starts a loop on the current playing track
 #[command(prefix_command, aliases("loop"), slash_command)]
 pub async fn beginloop(ctx: Context<'_>) -> Result<(), Error> {
-    let embed = create_embed_error("loop!");
-    send_embed_message(&ctx, embed).await?;
+    if let Some((manager, guild_id, _)) = get_voice_manage_info(&ctx).await {
+        let handler_lock = manager.get(guild_id).unwrap();
+        let handler = handler_lock.lock().await;
+
+        let queue = handler.queue();
+
+        let embed = create_embed_error("Entering in loop mode");
+        send_embed_message(&ctx, embed).await?;
+
+        if let Err(e) = queue.current().unwrap().enable_loop() {
+            error!("An error ocurred while enabling loop mode {}", e);
+
+            let embed = create_embed_error("There was an err while enabling loop mode");
+            send_embed_message(&ctx, embed).await?;
+        }
+    }
 
     Ok(())
 }
@@ -180,8 +194,21 @@ pub async fn beginloop(ctx: Context<'_>) -> Result<(), Error> {
 /// endloop: ends the loop, if there's one
 #[command(prefix_command, slash_command)]
 pub async fn endloop(ctx: Context<'_>) -> Result<(), Error> {
-    let embed = create_embed_error("endloop!");
-    send_embed_message(&ctx, embed).await?;
+    if let Some((manager, guild_id, _)) = get_voice_manage_info(&ctx).await {
+        let handler_lock = manager.get(guild_id).unwrap();
+        let handler = handler_lock.lock().await;
 
+        let queue = handler.queue();
+
+        let embed = create_embed_error("Leaving loop mode");
+        send_embed_message(&ctx, embed).await?;
+
+        if let Err(e) = queue.current().unwrap().disable_loop() {
+            error!("An error ocurred while disabling loop mode {}", e);
+
+            let embed = create_embed_error("There was an err while disabling loop mode");
+            send_embed_message(&ctx, embed).await?;
+        }
+    }
     Ok(())
 }
